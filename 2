@@ -1,0 +1,75 @@
+lua
+-- Define the range and damage multiplier
+getgenv().Range = 50 -- Set your desired range value here
+getgenv().DamageMultiplier = 2 -- Amplify damage by a factor of 2
+getgenv().ScriptEnabled = true -- Flag to enable or disable the script
+
+local players = game:GetService("Players")
+local player = players.LocalPlayer
+local camera = workspace.CurrentCamera
+local userInputService = game:GetService("UserInputService")
+
+-- Create a simple GUI button
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local toggleButton = Instance.new("TextButton", screenGui)
+toggleButton.Size = UDim2.new(0, 100, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -50, 0.1, 0) -- Centered at the top of the screen
+toggleButton.Text = "Disable Script"
+
+-- Function to toggle script
+local function toggleScript()
+	getgenv().ScriptEnabled = not getgenv().ScriptEnabled
+	if getgenv().ScriptEnabled then
+		toggleButton.Text = "Disable Script"
+	else
+		toggleButton.Text = "Enable Script"
+	end
+end
+
+toggleButton.MouseButton1Click:Connect(toggleScript)
+
+local function getPartsInViewport(maxDistance)
+	local partsInViewport = {}
+	for _, part in ipairs(workspace:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local distance = player:DistanceFromCharacter(part.Position)
+			if distance <= maxDistance then
+				local _, isVisible = camera:WorldToViewportPoint(part.Position)
+				if isVisible then
+					table.insert(partsInViewport, part)
+				end
+			end
+		end
+	end
+	return partsInViewport
+end
+
+local function applyDamage(humanoid)
+	if humanoid then
+		local originalHealth = humanoid.Health
+		local newHealth = originalHealth - (humanoid.MaxHealth * (1 - (1 / getgenv().DamageMultiplier)))
+		humanoid.Health = math.max(0, newHealth)
+	end
+end
+
+while true do 
+	wait()
+	if not getgenv().ScriptEnabled then
+		continue
+	end
+
+	local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+	local parts = getPartsInViewport(getgenv().Range)
+
+	for _, part in ipairs(parts) do
+		local humanoid = part.Parent:FindFirstChildWhichIsA("Humanoid")
+		if humanoid and humanoid.Health > 0 and part.Parent ~= player.Character then
+			if tool and tool:FindFirstChild("Handle") then
+				tool:Activate()
+				firetouchinterest(tool.Handle, part, 0)
+				firetouchinterest(tool.Handle, part, 1)
+			end
+			applyDamage(humanoid)
+		end
+	end
+end
